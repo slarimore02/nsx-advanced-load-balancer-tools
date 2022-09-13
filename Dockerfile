@@ -3,6 +3,7 @@ FROM ubuntu:focal-20200925
 ARG tf_version="0.14.5"
 ARG avi_sdk_version
 ARG avi_version
+ARG avimigrationtools_version
 
 RUN echo "export GOROOT=/usr/lib/go" >> /etc/bash.bashrc && \
     echo "export TF_PLUGIN_CACHE_DIR=$HOME/.terraform.d/plugin-cache"  >> /etc/bash.bashrc && \
@@ -22,15 +23,11 @@ RUN apt-get update && \
     apt install -y python3.8 \
     python3.8-dev \
     python3.8-distutils \
-    python2.7 \
-    python2.7-dev \
     jq \
     curl && \
     cd /tmp && curl -O https://bootstrap.pypa.io/get-pip.py && \
-    curl -o get-pip-27.py https://bootstrap.pypa.io/pip/2.7/get-pip.py && \
-    python2.7 /tmp/get-pip-27.py && \
     python3.8 /tmp/get-pip.py && \
-    ln -s /usr/bin/python2.7 /usr/bin/python && \
+    ln -s /usr/bin/python3.8 /usr/bin/python && \
     rm -rf /usr/local/bin/pip
 
 RUN apt-get update && \ 
@@ -57,44 +54,6 @@ RUN apt-get update && \
     jq \
     gcc \
     vim && \
-    pip2 install -U appdirs \
-    aws-google-auth \
-    awscli \
-    bigsuds \
-    ConfigParser \
-    ecdsa \
-    f5-sdk \
-    flask \
-    jinja2 \
-    jsondiff \
-    kubernetes \
-    netaddr \
-    networkx \
-    nose-html-reporting \
-    nose-testconfig \
-    openpyxl \
-    openstacksdk \
-    pandas \
-    paramiko \
-    pexpect \
-    pyOpenssl \
-    pyparsing \
-    pytest-cov \
-    pytest-xdist \
-    pytest \
-    pyvmomi \
-    pyyaml \
-    requests-toolbelt \
-    requests \
-    unittest2 \
-    vcrpy \
-    xlrd \
-    xlsxwriter \
-    urllib3 \
-    hvac \
-    yq \
-    avisdk==${avi_sdk_version} \
-    avimigrationtools==${avi_sdk_version} && \
     pip3 install setuptools==57.5.0 && \
     pip3 uninstall ansible-core -y \
     pip3 install ansible==2.9.13 && \
@@ -123,7 +82,8 @@ RUN apt-get update && \
     hvac \
     yq \
     avisdk==${avi_sdk_version} \
-    avimigrationtools==${avi_sdk_version} && \
+    avimigrationtools==${avi_sdk_version} \
+    git+https://github.com/vmware/vsphere-automation-sdk-python.git && \
     ansible-galaxy install -c avinetworks.avicontroller \
     avinetworks.avicontroller-azure \
     avinetworks.avicontroller_csp \
@@ -143,8 +103,6 @@ RUN if curl -sL --fail https://registry.terraform.io/v1/providers/vmware/avi/ver
     else \
         echo "Terraform version is not available with the specified version ${avi_version}." && exit 1; \
     fi
-
-RUN install_nsx_dependencies.py
 
 RUN cd /tmp && curl -O https://raw.githubusercontent.com/avinetworks/avitools/master/files/VMware-ovftool-4.4.0-16360108-lin.x86_64.bundle
 RUN /bin/bash /tmp/VMware-ovftool-4.4.0-16360108-lin.x86_64.bundle --eulas-agreed --required --console
