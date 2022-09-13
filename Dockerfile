@@ -142,7 +142,6 @@ RUN cd $HOME && \
     cp -r avitools/scripts/* /$HOME/scripts
 
 RUN cd $HOME && \
-    touch list && \
     echo '#!/bin/bash' > avitools-list && \
     echo "echo "f5_converter.py"" >> avitools-list && \
     echo "echo "netscaler_converter.py"" >> avitools-list && \
