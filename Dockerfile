@@ -138,10 +138,11 @@ RUN cd $HOME && \
     git clone https://github.com/as679/power-beaver && \
     git clone https://github.com/vmware/terraform-provider-avi && \
     git clone https://github.com/avinetworks/avitools && \
-    mkdir -p /avi/scripts && \
-    cp -r avitools/scripts/* /avi/scripts
+    mkdir -p /$HOME/scripts && \
+    cp -r avitools/scripts/* /$HOME/scripts
 
-RUN touch list && \
+RUN cd $HOME && \
+    touch list && \
     echo '#!/bin/bash' > avitools-list && \
     echo "echo "f5_converter.py"" >> avitools-list && \
     echo "echo "netscaler_converter.py"" >> avitools-list && \
@@ -154,9 +155,10 @@ RUN touch list && \
     echo "echo "vs_filter.py"" >> avitools-list && \
     echo "echo "nsxt_converter.py"" >> avitools-list
 
-RUN for script in $(ls /avi/scripts); do echo "echo $script" >> avitools-list; done;
+RUN for script in $(ls /$HOME/scripts); do echo "echo $script" >> avitools-list; done;
 
-RUN chmod +x avitools-list && \
+RUN cd $HOME && \
+    chmod +x avitools-list && \
     cp avitools-list /usr/local/bin/ && \
     echo "alias avitools-list=/usr/local/bin/avitools-list" >> ~/.bashrc
 
