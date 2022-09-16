@@ -84,35 +84,25 @@ RUN apt-get update && \
     avisdk==${avi_sdk_version} \
     avimigrationtools==${avi_sdk_version} \
     git+https://github.com/vmware/vsphere-automation-sdk-python.git && \
-    ansible-galaxy install -c avinetworks.avicontroller \
-    avinetworks.avicontroller-azure \
-    avinetworks.avicontroller_csp \
-    avinetworks.avicontroller_vmware \
-    avinetworks.avise  \
-    avinetworks.avise_csp \
-    avinetworks.docker \
-    avinetworks.network_interface \
-    avinetworks.avimigrationtools \
-    avinetworks.avise_vmware && \
     ansible-galaxy collection install community.network \
     vmware.alb
 
-RUN echo "Check specified terraform version is release."
+# Check specified terraform version is release
 RUN if curl -sL --fail https://registry.terraform.io/v1/providers/vmware/avi/versions | jq -r '.versions[].version' | grep ${avi_version}; then \
         echo "Terraform version is available." ; \
     else \
         echo "Terraform version is not available with the specified version ${avi_version}." && exit 1; \
     fi
 
-RUN cd /tmp && curl -O https://raw.githubusercontent.com/avinetworks/avitools/master/files/VMware-ovftool-4.4.0-16360108-lin.x86_64.bundle
-RUN /bin/bash /tmp/VMware-ovftool-4.4.0-16360108-lin.x86_64.bundle --eulas-agreed --required --console
-RUN rm -f /tmp/VMware-ovftool-4.4.0-16360108-lin.x86_64.bundle
+RUN cd /tmp && curl -O https://raw.githubusercontent.com/avinetworks/avitools/master/files/VMware-ovftool-4.4.0-16360108-lin.x86_64.bundle && \
+  /bin/bash /tmp/VMware-ovftool-4.4.0-16360108-lin.x86_64.bundle --eulas-agreed --required --console && \
+  rm -f /tmp/VMware-ovftool-4.4.0-16360108-lin.x86_64.bundle
 
-RUN curl -sL https://packages.microsoft.com/keys/microsoft.asc |   gpg --dearmor | tee /etc/apt/trusted.gpg.d/microsoft.asc.gpg && \
-    AZ_REPO=$(lsb_release -cs) && \
-    echo "deb [arch=amd64] https://packages.microsoft.com/repos/azure-cli/ $AZ_REPO main" | tee /etc/apt/sources.list.d/azure-cli.list && \
-    apt-get update && \
-    apt-get install -y azure-cli
+#RUN curl -sL https://packages.microsoft.com/keys/microsoft.asc |   gpg --dearmor | tee /etc/apt/trusted.gpg.d/microsoft.asc.gpg && \
+#    AZ_REPO=$(lsb_release -cs) && \
+#    echo "deb [arch=amd64] https://packages.microsoft.com/repos/azure-cli/ $AZ_REPO main" | tee /etc/apt/sources.list.d/azure-cli.list && \
+#    apt-get update && \
+#    apt-get install -y azure-cli
 
 RUN curl https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | bash
 
@@ -125,10 +115,10 @@ RUN curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add 
     echo "deb http://apt.kubernetes.io/ kubernetes-xenial main" | tee -a /etc/apt/sources.list.d/kubernetes.list && \
     apt-get update && apt-get install -y kubectl
 
-RUN echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] http://packages.cloud.google.com/apt \
-    cloud-sdk main" | tee -a /etc/apt/sources.list.d/google-cloud-sdk.list && curl \
-    https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key --keyring /usr/share/keyrings/cloud.google.gpg  \
-    add - && apt-get update -y && apt-get install google-cloud-sdk -y
+#RUN echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] http://packages.cloud.google.com/apt \
+#    cloud-sdk main" | tee -a /etc/apt/sources.list.d/google-cloud-sdk.list && curl \
+#    https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key --keyring /usr/share/keyrings/cloud.google.gpg  \
+#    add - && apt-get update -y && apt-get install google-cloud-sdk -y
 
 RUN curl -L https://github.com/vmware/govmomi/releases/download/v0.22.1/govc_linux_amd64.gz \ | gunzip > /usr/local/bin/govc && \
     chmod +x /usr/local/bin/govc
@@ -137,9 +127,12 @@ RUN cd $HOME && \
     git clone https://github.com/avinetworks/devops && \
     git clone https://github.com/as679/power-beaver && \
     git clone https://github.com/vmware/terraform-provider-avi && \
-    git clone https://github.com/avinetworks/avitools && \
-    mkdir -p /$HOME/scripts && \
-    cp -r avitools/scripts/* /$HOME/scripts
+    mkdir -p scripts terraform-examples && \
+    #cp -r avitools/scripts/* /$HOME/scripts && \
+    mv terraform-provider-avi/examples/* terraform-examples/ && \
+    rm -rf terraform-provider-avi
+
+COPY scripts/* /root/scripts/*
 
 RUN cd $HOME && \
     echo '#!/bin/bash' > avitools-list && \
@@ -152,17 +145,16 @@ RUN cd $HOME && \
     echo "echo "virtualservice_examples_api.py"" >> avitools-list && \
     echo "echo "config_patch.py"" >> avitools-list && \
     echo "echo "vs_filter.py"" >> avitools-list && \
-    echo "echo "nsxt_converter.py"" >> avitools-list
-
-RUN for script in $(ls /$HOME/scripts); do echo "echo $script" >> avitools-list; done;
+    echo "echo "nsxt_converter.py"" >> avitools-list && \
+    for script in $(ls /$HOME/scripts); do echo "echo $script" >> avitools-list; done;
 
 RUN cd $HOME && \
     chmod +x avitools-list && \
     cp avitools-list /usr/local/bin/ && \
-    echo "alias avitools-list=/usr/local/bin/avitools-list" >> ~/.bashrc
-
-RUN apt-get clean && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* $HOME/.cache $HOME/go/src $HOME/src
+    echo "alias avitools-list=/usr/local/bin/avitools-list" >> ~/.bashrc && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* $HOME/.cache $HOME/go/src $HOME/src && \
+    rm -rf /root/devops/postman/full_collection/Avi_*_postman_collection.json /root/devops/.git/objects
 
 ENV cmd cmd_to_run
 CMD eval $cmd
